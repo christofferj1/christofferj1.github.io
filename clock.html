@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Clock</title>
+
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #000;
+    color: #00ff88;
+    font-family: monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #clock {
+    font-size: 15vw;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="clock">--:--:--</div>
+
+<script>
+  // ===== CLOCK =====
+  function updateClock() {
+    const now = new Date();
+    document.getElementById("clock").textContent =
+      now.toLocaleTimeString([], { hour12: false });
+  }
+
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ===== FULLSCREEN =====
+  async function enterFullscreen() {
+    if (!document.fullscreenElement) {
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch (e) {
+        console.log("Fullscreen failed:", e);
+      }
+    }
+  }
+
+  document.addEventListener("click", enterFullscreen);
+  document.addEventListener("touchstart", enterFullscreen);
+
+  // ===== WAKE LOCK =====
+  let wakeLock = null;
+
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+
+        wakeLock.addEventListener('release', () => {
+          // Attempt to re-acquire automatically
+          setTimeout(requestWakeLock, 1000);
+        });
+      }
+    } catch (err) {
+      console.log("Wake lock error:", err);
+    }
+  }
+
+  // Must be triggered by user interaction
+  async function activateKioskMode() {
+    await enterFullscreen();
+    await requestWakeLock();
+  }
+
+  document.addEventListener("click", activateKioskMode);
+  document.addEventListener("touchstart", activateKioskMode);
+
+  // Re-acquire if tab becomes visible again
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      requestWakeLock();
+    }
+  });
+
+  // ===== OPTIONAL: Prevent accidental scroll / zoom =====
+  document.addEventListener("gesturestart", e => e.preventDefault());
+  document.addEventListener("dblclick", e => e.preventDefault());
+
+</script>
+
+</body>
+</html>
